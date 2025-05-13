@@ -7552,4 +7552,91 @@ Pu1xwz57O4zo1VYf6TqHJzVC3OMvMUM2hhdecMUe5x6GorNaj6g=
 
         Ok(())
     }
+
+    #[test]
+    fn slhdsa128s_mlkem768_x25519() -> Result<()> {
+        skip_unless_supported!(PublicKeyAlgorithm::SLHDSA128s);
+
+        let p = &crate::policy::StandardPolicy::new();
+        let t = None;
+        let cert = Cert::from_bytes(
+            crate::tests::file("pqc/v6-slhdsa-128s-sample-pk.pgp"))?;
+        assert_eq!(cert.userids().count(), 1);
+        let vcert = cert.with_policy(p, t)?;
+        assert_eq!(vcert.keys().count(), 2);
+        assert_eq!(vcert.keys().encrypted_secret().count(), 0);
+        assert_eq!(vcert.keys().unencrypted_secret().count(), 0);
+        assert_eq!(vcert.keys().for_signing().count(), 1);
+        assert_eq!(vcert.keys().for_transport_encryption().count(), 1);
+
+        let cert = Cert::from_bytes(
+            crate::tests::file("pqc/v6-slhdsa-128s-sample-sk.pgp"))?;
+        assert_eq!(cert.userids().count(), 1);
+        let vcert = cert.with_policy(p, t)?;
+        assert_eq!(vcert.keys().count(), 2);
+        assert_eq!(vcert.keys().encrypted_secret().count(), 0);
+        assert_eq!(vcert.keys().unencrypted_secret().count(), 2);
+        assert_eq!(vcert.keys().for_signing().count(), 1);
+        assert_eq!(vcert.keys().for_transport_encryption().count(), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn slhdsa128f_mlkem768_x25519() -> Result<()> {
+        skip_unless_supported!(PublicKeyAlgorithm::SLHDSA128f);
+
+        let p = &crate::policy::StandardPolicy::new();
+        let t = None;
+        let cert = Cert::from_bytes(
+            crate::tests::file("pqc/v6-slhdsa-128f-sample-pk.pgp"))?;
+        assert_eq!(cert.userids().count(), 1);
+        let vcert = cert.with_policy(p, t)?;
+        assert_eq!(vcert.keys().count(), 2);
+        assert_eq!(vcert.keys().encrypted_secret().count(), 0);
+        assert_eq!(vcert.keys().unencrypted_secret().count(), 0);
+        assert_eq!(vcert.keys().for_signing().count(), 1);
+        assert_eq!(vcert.keys().for_transport_encryption().count(), 1);
+
+        let cert = Cert::from_bytes(
+            crate::tests::file("pqc/v6-slhdsa-128f-sample-sk.pgp"))?;
+        assert_eq!(cert.userids().count(), 1);
+        let vcert = cert.with_policy(p, t)?;
+        assert_eq!(vcert.keys().count(), 2);
+        assert_eq!(vcert.keys().encrypted_secret().count(), 0);
+        assert_eq!(vcert.keys().unencrypted_secret().count(), 2);
+        assert_eq!(vcert.keys().for_signing().count(), 1);
+        assert_eq!(vcert.keys().for_transport_encryption().count(), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn slhdsa256s_mlkem768_x25519() -> Result<()> {
+        skip_unless_supported!(PublicKeyAlgorithm::SLHDSA256s);
+
+        let p = &crate::policy::StandardPolicy::new();
+        let t = None;
+        let cert = Cert::from_bytes(
+            crate::tests::file("pqc/v6-slhdsa-256s-sample-pk.pgp"))?;
+        assert_eq!(cert.userids().count(), 1);
+        let vcert = cert.with_policy(p, t)?;
+        assert_eq!(vcert.keys().count(), 2);
+        assert_eq!(vcert.keys().encrypted_secret().count(), 0);
+        assert_eq!(vcert.keys().unencrypted_secret().count(), 0);
+        assert_eq!(vcert.keys().for_signing().count(), 1);
+        assert_eq!(vcert.keys().for_transport_encryption().count(), 1);
+
+        let cert = Cert::from_bytes(
+            crate::tests::file("pqc/v6-slhdsa-256s-sample-sk.pgp"))?;
+        assert_eq!(cert.userids().count(), 1);
+        let vcert = cert.with_policy(p, t)?;
+        assert_eq!(vcert.keys().count(), 2);
+        assert_eq!(vcert.keys().encrypted_secret().count(), 0);
+        assert_eq!(vcert.keys().unencrypted_secret().count(), 2);
+        assert_eq!(vcert.keys().for_signing().count(), 1);
+        assert_eq!(vcert.keys().for_transport_encryption().count(), 1);
+
+        Ok(())
+    }
 }

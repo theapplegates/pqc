@@ -41,6 +41,7 @@ impl Asymmetric for super::Backend {
                 => curve448::IS_SUPPORTED,
             MLDSA65_Ed25519 => false,
             MLDSA87_Ed448 => false,
+            SLHDSA128s | SLHDSA128f | SLHDSA256s => false,
             ElGamalEncrypt | ElGamalEncryptSign | Private(_) | Unknown(_)
                 => false,
         }
@@ -389,7 +390,8 @@ impl<P: key::KeyParts, R: key::KeyRole> Key<P, R> {
                                                  data),
 
             RSASign | DSA | ECDSA | EdDSA | Ed25519 | Ed448
-                | MLDSA65_Ed25519 | MLDSA87_Ed448 =>
+                | MLDSA65_Ed25519 | MLDSA87_Ed448
+                | SLHDSA128s | SLHDSA128f | SLHDSA256s =>
                 Err(Error::InvalidOperation(
                     format!("{} is not an encryption algorithm", self.pk_algo())
                 ).into()),

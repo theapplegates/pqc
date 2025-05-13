@@ -72,6 +72,39 @@ impl<R> Key6<SecretParts, R>
             }.into())
     }
 
+    /// Generates a new SLHDSA128s key.
+    pub fn generate_slhdsa128s() -> Result<Self> {
+        let (secret, public) = Backend::slhdsa128s_generate_key()?;
+
+        Self::with_secret(
+            crate::now(),
+            PublicKeyAlgorithm::SLHDSA128s,
+            mpi::PublicKey::SLHDSA128s { public },
+            mpi::SecretKeyMaterial::SLHDSA128s { secret }.into())
+    }
+
+    /// Generates a new SLHDSA128f key.
+    pub fn generate_slhdsa128f() -> Result<Self> {
+        let (secret, public) = Backend::slhdsa128f_generate_key()?;
+
+        Self::with_secret(
+            crate::now(),
+            PublicKeyAlgorithm::SLHDSA128f,
+            mpi::PublicKey::SLHDSA128f { public },
+            mpi::SecretKeyMaterial::SLHDSA128f { secret }.into())
+    }
+
+    /// Generates a new SLHDSA256s key.
+    pub fn generate_slhdsa256s() -> Result<Self> {
+        let (secret, public) = Backend::slhdsa256s_generate_key()?;
+
+        Self::with_secret(
+            crate::now(),
+            PublicKeyAlgorithm::SLHDSA256s,
+            mpi::PublicKey::SLHDSA256s { public },
+            mpi::SecretKeyMaterial::SLHDSA256s { secret }.into())
+    }
+
     /// Generates a new RSA key with a public modulos of size `bits`.
     pub fn generate_rsa(bits: usize) -> Result<Self> {
         Key4::generate_rsa(bits)

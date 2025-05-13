@@ -1790,7 +1790,8 @@ impl<P, R> Key<P, R>
             },
 
             RSASign | DSA | ECDSA | EdDSA | Ed25519 | Ed448
-                | MLDSA65_Ed25519 | MLDSA87_Ed448 =>
+                | MLDSA65_Ed25519 | MLDSA87_Ed448
+                | SLHDSA128s | SLHDSA128f | SLHDSA256s =>
                 Err(Error::InvalidOperation(
                     format!("{} is not an encryption algorithm", self.pk_algo())
                 ).into()),
@@ -1910,6 +1911,15 @@ impl<P, R> Key<P, R>
 
                     ok == 2
                 },
+
+            (PublicKey::SLHDSA128s { public }, Signature::SLHDSA128s { sig }) =>
+                Backend::slhdsa128s_verify(public, digest, sig)?,
+
+            (PublicKey::SLHDSA128f { public }, Signature::SLHDSA128f { sig }) =>
+                Backend::slhdsa128f_verify(public, digest, sig)?,
+
+            (PublicKey::SLHDSA256s { public }, Signature::SLHDSA256s { sig }) =>
+                Backend::slhdsa256s_verify(public, digest, sig)?,
 
             (PublicKey::DSA { p, q, g, y }, Signature::DSA { r, s }) =>
                 Backend::dsa_verify(p, q, g, y, digest, r, s)?,

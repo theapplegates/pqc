@@ -152,6 +152,9 @@ fn classify_pk_algo(algo: PublicKeyAlgorithm, seipdv1: bool)
         a @ PublicKeyAlgorithm::Ed448 |
         a @ PublicKeyAlgorithm::MLDSA65_Ed25519 |
         a @ PublicKeyAlgorithm::MLDSA87_Ed448 |
+        a @ PublicKeyAlgorithm::SLHDSA128s |
+        a @ PublicKeyAlgorithm::SLHDSA128f |
+        a @ PublicKeyAlgorithm::SLHDSA256s |
         a @ PublicKeyAlgorithm::Private(_) |
         a @ PublicKeyAlgorithm::Unknown(_) =>
             Err(Error::UnsupportedPublicKeyAlgorithm(a).into()),

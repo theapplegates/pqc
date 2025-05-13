@@ -270,6 +270,27 @@ impl Signer for KeyPair {
                          mldsa_sec, digest)?,
                  }),
 
+                (PublicKeyAlgorithm::SLHDSA128s,
+                 mpi::PublicKey::SLHDSA128s { .. },
+                 mpi::SecretKeyMaterial::SLHDSA128s { secret }) =>
+                    Ok(mpi::Signature::SLHDSA128s {
+                        sig: Backend::slhdsa128s_sign(secret, digest)?,
+                    }),
+
+                (PublicKeyAlgorithm::SLHDSA128f,
+                 mpi::PublicKey::SLHDSA128f { .. },
+                 mpi::SecretKeyMaterial::SLHDSA128f { secret }) =>
+                    Ok(mpi::Signature::SLHDSA128f {
+                        sig: Backend::slhdsa128f_sign(secret, digest)?,
+                    }),
+
+                (PublicKeyAlgorithm::SLHDSA256s,
+                 mpi::PublicKey::SLHDSA256s { .. },
+                 mpi::SecretKeyMaterial::SLHDSA256s { secret }) =>
+                    Ok(mpi::Signature::SLHDSA256s {
+                        sig: Backend::slhdsa256s_sign(secret, digest)?,
+                    }),
+
                 (PublicKeyAlgorithm::EdDSA,
                  mpi::PublicKey::EdDSA { curve, q },
                  mpi::SecretKeyMaterial::EdDSA { scalar }) => match curve {

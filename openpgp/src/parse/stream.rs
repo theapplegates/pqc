@@ -4316,6 +4316,30 @@ xHUDBRY0WIQ+50WENDPP";
                             b"Testing\n")
     }
 
+    /// This sample detached signature is from draft-ietf-openpgp-pqc-09.
+    #[test]
+    fn detached_slhdsa_128s() -> Result<()> {
+        sample_detached_sig("pqc/v6-slhdsa-128s-sample-pk.pgp",
+                            "pqc/v6-slhdsa-128s-sample-signature.pgp",
+                            b"Testing\n")
+    }
+
+    /// This sample detached signature is from draft-ietf-openpgp-pqc-09.
+    #[test]
+    fn detached_slhdsa_128f() -> Result<()> {
+        sample_detached_sig("pqc/v6-slhdsa-128f-sample-pk.pgp",
+                            "pqc/v6-slhdsa-128f-sample-signature.pgp",
+                            b"Testing\n")
+    }
+
+    /// This sample detached signature is from draft-ietf-openpgp-pqc-09.
+    #[test]
+    fn detached_slhdsa_256s() -> Result<()> {
+        sample_detached_sig("pqc/v6-slhdsa-256s-sample-pk.pgp",
+                            "pqc/v6-slhdsa-256s-sample-signature.pgp",
+                            b"Testing\n")
+    }
+
     fn sample_detached_sig(cert: &str, sig: &str, data: &[u8])
                            -> Result<()>
     {

@@ -1017,6 +1017,18 @@ impl Marshal for crypto::mpi::PublicKey {
                 w.write_all(mldsa.as_ref())?;
             },
 
+            SLHDSA128s { public } => {
+                w.write_all(public)?;
+            },
+
+            SLHDSA128f { public } => {
+                w.write_all(public)?;
+            },
+
+            SLHDSA256s { public } => {
+                w.write_all(public.as_ref())?;
+            },
+
             Unknown { ref mpis, ref rest } => {
                 for mpi in mpis.iter() {
                     mpi.serialize(w)?;
@@ -1065,6 +1077,10 @@ impl MarshalInto for crypto::mpi::PublicKey {
 
             MLDSA65_Ed25519 { .. } => 32 + 1952,
             MLDSA87_Ed448 { .. } => 57 + 2592,
+
+            SLHDSA128s { .. } => 32,
+            SLHDSA128f { .. } => 32,
+            SLHDSA256s { .. } => 64,
 
             Unknown { ref mpis, ref rest } => {
                 mpis.iter().map(|mpi| mpi.serialized_len()).sum::<usize>()
@@ -1126,6 +1142,18 @@ impl Marshal for crypto::mpi::SecretKeyMaterial {
                 w.write_all(mldsa.as_ref())?;
             },
 
+            SLHDSA128s { secret } => {
+                w.write_all(secret.as_ref())?;
+            },
+
+            SLHDSA128f { secret } => {
+                w.write_all(secret.as_ref())?;
+            },
+
+            SLHDSA256s { secret } => {
+                w.write_all(secret.as_ref())?;
+            },
+
             Unknown { ref mpis, ref rest } => {
                 for mpi in mpis.iter() {
                     mpi.serialize(w)?;
@@ -1174,6 +1202,10 @@ impl MarshalInto for crypto::mpi::SecretKeyMaterial {
 
             MLDSA65_Ed25519 { .. } => 32 + 32,
             MLDSA87_Ed448 { .. } => 57 + 32,
+
+            SLHDSA128s { .. } => 64,
+            SLHDSA128f { .. } => 64,
+            SLHDSA256s { .. } => 128,
 
             Unknown { ref mpis, ref rest } => {
                 mpis.iter().map(|mpi| mpi.serialized_len()).sum::<usize>()
@@ -1325,6 +1357,19 @@ impl Marshal for crypto::mpi::Signature {
             Ed25519 { s } => w.write_all(&s[..])?,
             Ed448 { s } => w.write_all(&s[..])?,
 
+            SLHDSA128s { sig } => {
+                w.write_all(sig.as_ref())?;
+            },
+
+            SLHDSA128f { sig } => {
+                w.write_all(sig.as_ref())?;
+            },
+
+            SLHDSA256s { sig } => {
+                w.write_all(sig.as_ref())?;
+            },
+
+
             MLDSA65_Ed25519 { eddsa, mldsa } => {
                 w.write_all(&eddsa[..])?;
                 w.write_all(&mldsa[..])?;
@@ -1372,6 +1417,10 @@ impl MarshalInto for crypto::mpi::Signature {
 
             MLDSA65_Ed25519 { .. } => 64 + 3309,
             MLDSA87_Ed448 { .. } => 114 + 4627,
+
+            SLHDSA128s { .. } => 7856,
+            SLHDSA128f { .. } => 17088,
+            SLHDSA256s { .. } => 29792,
 
             Unknown { ref mpis, ref rest } => {
                 mpis.iter().map(|mpi| mpi.serialized_len()).sum::<usize>()

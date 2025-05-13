@@ -497,6 +497,69 @@ where R: KeyRole,
                               })?,
         })
     }
+
+    /// Creates an OpenPGP public key packet from existing
+    /// SLH-DSA-128s key material.
+    ///
+    /// SLH-DSA-128s keys must be exactly 32 bytes.
+    ///
+    /// The key will have its creation date set to `ctime` or the
+    /// current time if `None` is given.
+    pub fn import_public_slhdsa128s<T>(public: &[u8], ctime: T)
+        -> Result<Self>
+    where
+        T: Into<Option<time::SystemTime>>
+    {
+        Ok(Key6 {
+            common: Key4::new(ctime.into().unwrap_or_else(crate::now),
+                              PublicKeyAlgorithm::SLHDSA128s,
+                              mpi::PublicKey::SLHDSA128s {
+                                  public: public.try_into()?,
+                              })?,
+        })
+    }
+
+    /// Creates an OpenPGP public key packet from existing
+    /// SLH-DSA-128f key material.
+    ///
+    /// SLH-DSA-128f keys must be exactly 32 bytes.
+    ///
+    /// The key will have its creation date set to `ctime` or the
+    /// current time if `None` is given.
+    pub fn import_public_slhdsa128f<T>(public: &[u8], ctime: T)
+        -> Result<Self>
+    where
+        T: Into<Option<time::SystemTime>>
+    {
+        Ok(Key6 {
+            common: Key4::new(ctime.into().unwrap_or_else(crate::now),
+                              PublicKeyAlgorithm::SLHDSA128f,
+                              mpi::PublicKey::SLHDSA128f {
+                                  public: public.try_into()?,
+                              })?,
+        })
+    }
+
+    /// Creates an OpenPGP public key packet from existing
+    /// SLH-DSA-256s key material.
+    ///
+    /// SLH-DSA-256s keys must be exactly 64 bytes.
+    ///
+    /// The key will have its creation date set to `ctime` or the
+    /// current time if `None` is given.
+    pub fn import_public_slhdsa256s<T>(public: &[u8], ctime: T)
+        -> Result<Self>
+    where
+        T: Into<Option<time::SystemTime>>
+    {
+        Ok(Key6 {
+            common: Key4::new(ctime.into().unwrap_or_else(crate::now),
+                              PublicKeyAlgorithm::SLHDSA256s,
+                              mpi::PublicKey::SLHDSA256s {
+                                  public: Box::new(public.try_into()?),
+                              })?,
+        })
+    }
 }
 
 impl<R> Key6<SecretParts, R>
@@ -1013,6 +1076,9 @@ mod tests {
             })).chain([
                 (PublicKeyAlgorithm::MLDSA65_Ed25519, Key6::generate_mldsa65_ed25519 as fn() -> Result<_>),
                 (PublicKeyAlgorithm::MLDSA87_Ed448, Key6::generate_mldsa87_ed448),
+                (PublicKeyAlgorithm::SLHDSA128s, Key6::generate_slhdsa128s),
+                (PublicKeyAlgorithm::SLHDSA128f, Key6::generate_slhdsa128f),
+                (PublicKeyAlgorithm::SLHDSA256s, Key6::generate_slhdsa256s),
             ].into_iter().filter_map(|(algo, gen)| {
                 if algo.is_supported() {
                     Some(gen().expect(&format!("{} is supported", algo)))
@@ -1285,6 +1351,75 @@ JC6thFQ9+JWj
 
             let imported_key = Key6::import_public_mldsa87_ed448(
                 &mldsa[..], &eddsa[..], creation_time)
+                .expect("Can import key");
+
+            assert_eq!(key.parts_into_public(), imported_key);
+        }
+
+        Ok(())
+    }
+
+
+    #[test]
+    fn import_public_slhdsa() -> Result<()> {
+        if PublicKeyAlgorithm::SLHDSA128s.is_supported() {
+            let key: Key6<SecretParts, UnspecifiedRole>
+                = Key6::generate_slhdsa128s()
+                .expect("failed to generate SLHDSA128s key, but it is supported.");
+
+            assert_eq!(key.pk_algo(), PublicKeyAlgorithm::SLHDSA128s);
+            let creation_time = key.creation_time();
+            let mpis = key.mpis();
+            let crate::crypto::mpi::PublicKey::SLHDSA128s {
+                public,
+            } = &mpis else {
+                panic!("Key generate generated the wrong key");
+            };
+
+            let imported_key = Key6::import_public_slhdsa128s(
+                &public[..], creation_time)
+                .expect("Can import key");
+
+            assert_eq!(key.parts_into_public(), imported_key);
+        }
+
+        if PublicKeyAlgorithm::SLHDSA128f.is_supported() {
+            let key: Key6<SecretParts, UnspecifiedRole>
+                = Key6::generate_slhdsa128f()
+                .expect("failed to generate SLHDSA128f key, but it is supported.");
+
+            assert_eq!(key.pk_algo(), PublicKeyAlgorithm::SLHDSA128f);
+            let creation_time = key.creation_time();
+            let mpis = key.mpis();
+            let crate::crypto::mpi::PublicKey::SLHDSA128f {
+                public,
+            } = &mpis else {
+                panic!("Key generate generated the wrong key");
+            };
+
+            let imported_key = Key6::import_public_slhdsa128f(
+                &public[..], creation_time)
+                .expect("Can import key");
+
+            assert_eq!(key.parts_into_public(), imported_key);
+        }
+
+        if PublicKeyAlgorithm::SLHDSA256s.is_supported() {
+            let key: Key6<SecretParts, UnspecifiedRole>
+                = Key6::generate_slhdsa256s()
+                .expect("failed to generate SLHDSA256s key, but it is supported.");
+
+            assert_eq!(key.pk_algo(), PublicKeyAlgorithm::SLHDSA256s);
+            let creation_time = key.creation_time();
+            let mpis = key.mpis();
+            let crate::crypto::mpi::PublicKey::SLHDSA256s {
+                public,
+            } = &mpis else {
+                panic!("Key generate generated the wrong key");
+            };
+
+            let imported_key = Key6::import_public_slhdsa256s(
+                &public[..], creation_time)
                 .expect("Can import key");
 
             assert_eq!(key.parts_into_public(), imported_key);

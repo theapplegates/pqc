@@ -3723,6 +3723,18 @@ impl ArbitraryBounded for Signature4 {
                 mldsa: Box::new(arbitrarize(g, [0; 4627])),
             },
 
+            SLHDSA128s => mpi::Signature::SLHDSA128s {
+                sig: arbitrarize(g, vec![0; 7856]).try_into().unwrap(),
+            },
+
+            SLHDSA128f => mpi::Signature::SLHDSA128f {
+                sig: arbitrarize(g, vec![0; 17088]).try_into().unwrap(),
+            },
+
+            SLHDSA256s => mpi::Signature::SLHDSA256s {
+                sig: arbitrarize(g, vec![0; 29792]).try_into().unwrap(),
+            },
+
             ElGamalEncryptSign |
             RSAEncrypt | ElGamalEncrypt | ECDH |
             X25519 | X448 |
@@ -3797,6 +3809,18 @@ impl ArbitraryBounded for Signature3 {
             MLDSA87_Ed448 => mpi::Signature::MLDSA87_Ed448 {
                 eddsa: Box::new(arbitrarize(g, [0; 114])),
                 mldsa: Box::new(arbitrarize(g, [0; 4627])),
+            },
+
+            SLHDSA128s => mpi::Signature::SLHDSA128s {
+                sig: arbitrarize(g, vec![0; 7856]).try_into().unwrap(),
+            },
+
+            SLHDSA128f => mpi::Signature::SLHDSA128f {
+                sig: arbitrarize(g, vec![0; 17088]).try_into().unwrap(),
+            },
+
+            SLHDSA256s => mpi::Signature::SLHDSA256s {
+                sig: arbitrarize(g, vec![0; 29792]).try_into().unwrap(),
             },
 
             _ => unreachable!(),

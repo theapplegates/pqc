@@ -174,6 +174,78 @@ pub trait Asymmetric {
             PublicKeyAlgorithm::MLDSA87_Ed448).into())
     }
 
+    /// Generates an SLHDSA128s key pair.
+    ///
+    /// Returns a tuple containing the secret and public key.
+    fn slhdsa128s_generate_key() -> Result<(Protected, [u8; 32])> {
+        Err(Error::UnsupportedPublicKeyAlgorithm(
+            PublicKeyAlgorithm::SLHDSA128s).into())
+    }
+
+    /// Creates an SLHDSA128s signature.
+    fn slhdsa128s_sign(_secret: &Protected, _digest: &[u8])
+                       -> Result<Box<[u8; 7856]>>
+    {
+        Err(Error::UnsupportedPublicKeyAlgorithm(
+            PublicKeyAlgorithm::SLHDSA128s).into())
+    }
+
+    /// Verifies an SLHDSA128s signature.
+    fn slhdsa128s_verify(_public: &[u8; 32], _digest: &[u8], _signature: &[u8; 7856])
+                         -> Result<bool>
+    {
+        Err(Error::UnsupportedPublicKeyAlgorithm(
+            PublicKeyAlgorithm::SLHDSA128s).into())
+    }
+
+    /// Generates an SLHDSA128f key pair.
+    ///
+    /// Returns a tuple containing the secret and public key.
+    fn slhdsa128f_generate_key() -> Result<(Protected, [u8; 32])> {
+        Err(Error::UnsupportedPublicKeyAlgorithm(
+            PublicKeyAlgorithm::SLHDSA128f).into())
+    }
+
+    /// Creates an SLHDSA128f signature.
+    fn slhdsa128f_sign(_secret: &Protected, _digest: &[u8])
+                       -> Result<Box<[u8; 17088]>>
+    {
+        Err(Error::UnsupportedPublicKeyAlgorithm(
+            PublicKeyAlgorithm::SLHDSA128f).into())
+    }
+
+    /// Verifies an SLHDSA128f signature.
+    fn slhdsa128f_verify(_public: &[u8; 32], _digest: &[u8], _signature: &[u8; 17088])
+                         -> Result<bool>
+    {
+        Err(Error::UnsupportedPublicKeyAlgorithm(
+            PublicKeyAlgorithm::SLHDSA128f).into())
+    }
+
+    /// Generates an SLHDSA256s key pair.
+    ///
+    /// Returns a tuple containing the secret and public key.
+    fn slhdsa256s_generate_key() -> Result<(Protected, Box<[u8; 64]>)> {
+        Err(Error::UnsupportedPublicKeyAlgorithm(
+            PublicKeyAlgorithm::SLHDSA256s).into())
+    }
+
+    /// Creates an SLHDSA256s signature.
+    fn slhdsa256s_sign(_secret: &Protected, _digest: &[u8])
+                       -> Result<Box<[u8; 29792]>>
+    {
+        Err(Error::UnsupportedPublicKeyAlgorithm(
+            PublicKeyAlgorithm::SLHDSA256s).into())
+    }
+
+    /// Verifies an SLHDSA256s signature.
+    fn slhdsa256s_verify(_public: &[u8; 64], _digest: &[u8], _signature: &[u8; 29792])
+                         -> Result<bool>
+    {
+        Err(Error::UnsupportedPublicKeyAlgorithm(
+            PublicKeyAlgorithm::SLHDSA256s).into())
+    }
+
     /// Generates a DSA key pair.
     ///
     /// `p_bits` denotes the desired size of the parameter `p`.

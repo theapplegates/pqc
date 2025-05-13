@@ -714,7 +714,7 @@ a_cutoff_list!(SubpacketTagCutoffList, SubpacketTag, 40,
                    ACCEPT,                 // 39. PreferredAEADCiphersuites.
                ]);
 
-a_cutoff_list!(AsymmetricAlgorithmCutoffList, AsymmetricAlgorithm, 26,
+a_cutoff_list!(AsymmetricAlgorithmCutoffList, AsymmetricAlgorithm, 29,
                [
                    Some(Timestamp::Y2014M2), // 0. RSA1024.
                    ACCEPT,                   // 1. RSA2048.
@@ -742,6 +742,9 @@ a_cutoff_list!(AsymmetricAlgorithmCutoffList, AsymmetricAlgorithm, 26,
                    ACCEPT,                   // 23. EdDSA (i.e., Legacy Ed25519).
                    ACCEPT,                   // 24. MLDSA65_Ed25519.
                    ACCEPT,                   // 25. MLDSA87_Ed448.
+                   ACCEPT,                   // 26. SLHDSA128s.
+                   ACCEPT,                   // 27. SLHDSA128f.
+                   ACCEPT,                   // 28. SLHDSA256s.
                ]);
 
 a_cutoff_list!(SymmetricAlgorithmCutoffList, SymmetricAlgorithm, 14,
@@ -1601,6 +1604,13 @@ impl<'a> Policy for StandardPolicy<'a> {
             (PublicKeyAlgorithm::MLDSA87_Ed448, _) =>
                 AsymmetricAlgorithm::MLDSA87_Ed448,
 
+            (PublicKeyAlgorithm::SLHDSA128s, _) =>
+                AsymmetricAlgorithm::SLHDSA128s,
+            (PublicKeyAlgorithm::SLHDSA128f, _) =>
+                AsymmetricAlgorithm::SLHDSA128f,
+            (PublicKeyAlgorithm::SLHDSA256s, _) =>
+                AsymmetricAlgorithm::SLHDSA256s,
+
             (PublicKeyAlgorithm::Private(_), _)
                 | (PublicKeyAlgorithm::Unknown(_), _)
                 => AsymmetricAlgorithm::Unknown,
@@ -1745,12 +1755,21 @@ pub enum AsymmetricAlgorithm {
     /// Composite signature algorithm using ML-DSA-87 and Ed448.
     MLDSA87_Ed448,
 
+    /// SLH-DSA signature algorithm 128 bit, small signatures.
+    SLHDSA128s,
+
+    /// SLH-DSA signature algorithm 128 bit, fast signatures.
+    SLHDSA128f,
+
+    /// SLH-DSA signature algorithm 256 bit, small signatures.
+    SLHDSA256s,
+
     /// Unknown algorithm.
     Unknown,
 }
 assert_send_and_sync!(AsymmetricAlgorithm);
 
-const ASYMMETRIC_ALGORITHM_VARIANTS: [AsymmetricAlgorithm; 26] = [
+const ASYMMETRIC_ALGORITHM_VARIANTS: [AsymmetricAlgorithm; 29] = [
     AsymmetricAlgorithm::RSA1024,
     AsymmetricAlgorithm::RSA2048,
     AsymmetricAlgorithm::RSA3072,
@@ -1777,6 +1796,9 @@ const ASYMMETRIC_ALGORITHM_VARIANTS: [AsymmetricAlgorithm; 26] = [
     AsymmetricAlgorithm::EdDSA,
     AsymmetricAlgorithm::MLDSA65_Ed25519,
     AsymmetricAlgorithm::MLDSA87_Ed448,
+    AsymmetricAlgorithm::SLHDSA128s,
+    AsymmetricAlgorithm::SLHDSA128f,
+    AsymmetricAlgorithm::SLHDSA256s,
 ];
 
 impl AsymmetricAlgorithm {
@@ -1825,6 +1847,9 @@ impl From<AsymmetricAlgorithm> for u8 {
             EdDSA => 23,
             MLDSA65_Ed25519 => 24,
             MLDSA87_Ed448 => 25,
+            SLHDSA128s => 26,
+            SLHDSA128f => 27,
+            SLHDSA256s => 28,
             Unknown => 255,
         }
     }

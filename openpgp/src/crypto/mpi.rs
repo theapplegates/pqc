@@ -628,6 +628,24 @@ pub enum PublicKey {
         mldsa: Box<[u8; 2592]>,
     },
 
+    /// SLH-DSA-SHAKE-128s public key.
+    SLHDSA128s {
+        /// The public key, an opaque string.
+        public: [u8; 32],
+    },
+
+    /// SLH-DSA-SHAKE-128f public key.
+    SLHDSA128f {
+        /// The public key, an opaque string.
+        public: [u8; 32],
+    },
+
+    /// SLH-DSA-SHAKE-256s public key.
+    SLHDSA256s {
+        /// The public key, an opaque string.
+        public: Box<[u8; 64]>,
+    },
+
     /// Unknown number of MPIs for an unknown algorithm.
     Unknown {
         /// The successfully parsed MPIs.
@@ -714,6 +732,21 @@ impl fmt::Debug for PublicKey {
                 .field("mldsa", &hex::encode(mldsa.as_ref()))
                 .finish(),
 
+            PublicKey::SLHDSA128s { public } =>
+                f.debug_struct("SLHDSA128s")
+                .field("public", &hex::encode(public))
+                .finish(),
+
+            PublicKey::SLHDSA128f { public } =>
+                f.debug_struct("SLHDSA128f")
+                .field("public", &hex::encode(public))
+                .finish(),
+
+            PublicKey::SLHDSA256s { public } =>
+                f.debug_struct("SLHDSA256s")
+                .field("public", &hex::encode(public.as_ref()))
+                .finish(),
+
             PublicKey::Unknown { mpis, rest } =>
                 f.debug_struct("Unknown")
                 .field("mpis", mpis)
@@ -749,6 +782,9 @@ impl PublicKey {
             Ed448 { .. } => Some(456),
             MLDSA65_Ed25519 { .. } => None,
             MLDSA87_Ed448 { .. } => None,
+            SLHDSA128s { .. } => None,
+            SLHDSA128f { .. } => None,
+            SLHDSA256s { .. } => None,
             Unknown { .. } => None,
         }
     }
@@ -773,6 +809,9 @@ impl PublicKey {
                 Some(PublicKeyAlgorithm::MLDSA65_Ed25519),
             MLDSA87_Ed448 { .. } =>
                 Some(PublicKeyAlgorithm::MLDSA87_Ed448),
+            SLHDSA128s { .. } => Some(PublicKeyAlgorithm::SLHDSA128s),
+            SLHDSA128f { .. } => Some(PublicKeyAlgorithm::SLHDSA128f),
+            SLHDSA256s { .. } => Some(PublicKeyAlgorithm::SLHDSA256s),
             Unknown { .. } => None,
         }
     }
@@ -790,7 +829,7 @@ impl Arbitrary for PublicKey {
         use self::PublicKey::*;
         use crate::arbitrary_helper::gen_arbitrary_from_range;
 
-        match gen_arbitrary_from_range(0..12, g) {
+        match gen_arbitrary_from_range(0..15, g) {
             0 => RSA {
                 e: MPI::arbitrary(g),
                 n: MPI::arbitrary(g),
@@ -839,6 +878,18 @@ impl Arbitrary for PublicKey {
             11 => MLDSA87_Ed448 {
                 eddsa: Box::new(arbitrarize(g, [0; 57])),
                 mldsa: Box::new(arbitrarize(g, [0; 2592])),
+            },
+
+            12 => SLHDSA128s {
+                public: arbitrary(g),
+            },
+
+            13 => SLHDSA128f {
+                public: arbitrary(g),
+            },
+
+            14 => SLHDSA256s {
+                public: Box::new(arbitrarize(g, [0; 64])),
             },
 
             _ => unreachable!(),
@@ -958,6 +1009,24 @@ pub enum SecretKeyMaterial {
         mldsa: Protected,
     },
 
+    /// SLH-DSA-SHAKE-128s secret key.
+    SLHDSA128s {
+        /// The secret key, an opaque string.
+        secret: Protected,
+    },
+
+    /// SLH-DSA-SHAKE-128f secret key.
+    SLHDSA128f {
+        /// The secret key, an opaque string.
+        secret: Protected,
+    },
+
+    /// SLH-DSA-SHAKE-256s secret key.
+    SLHDSA256s {
+        /// The secret key, an opaque string.
+        secret: Protected,
+    },
+
     /// Unknown number of MPIs for an unknown algorithm.
     Unknown {
         /// The successfully parsed MPIs.
@@ -1037,6 +1106,21 @@ impl fmt::Debug for SecretKeyMaterial {
                     .field("mldsa", &hex::encode(mldsa))
                     .finish(),
 
+                SecretKeyMaterial::SLHDSA128s { secret } =>
+                    f.debug_struct("SLHDSA128s")
+                    .field("secret", &hex::encode(secret.as_ref()))
+                    .finish(),
+
+                SecretKeyMaterial::SLHDSA128f { secret } =>
+                    f.debug_struct("SLHDSA128f")
+                    .field("secret", &hex::encode(secret.as_ref()))
+                    .finish(),
+
+                SecretKeyMaterial::SLHDSA256s { secret } =>
+                    f.debug_struct("SLHDSA256s")
+                    .field("secret", &hex::encode(secret.as_ref()))
+                    .finish(),
+
                 SecretKeyMaterial::Unknown{ mpis, rest } =>
                     f.debug_struct("Unknown")
                     .field("mpis", mpis)
@@ -1069,6 +1153,12 @@ impl fmt::Debug for SecretKeyMaterial {
                     f.write_str("MLDSA65_Ed25519 { <Redacted> }"),
                 SecretKeyMaterial::MLDSA87_Ed448 { .. } =>
                     f.write_str("MLDSA87_Ed448 { <Redacted> }"),
+                SecretKeyMaterial::SLHDSA128s { .. } =>
+                    f.write_str("SLHDSA128s { <Redacted> }"),
+                SecretKeyMaterial::SLHDSA128f { .. } =>
+                    f.write_str("SLHDSA128f { <Redacted> }"),
+                SecretKeyMaterial::SLHDSA256s { .. } =>
+                    f.write_str("SLHDSA256s { <Redacted> }"),
                 SecretKeyMaterial::Unknown{ .. } =>
                     f.write_str("Unknown { <Redacted> }"),
             }
@@ -1101,6 +1191,9 @@ impl Ord for SecretKeyMaterial {
                 SecretKeyMaterial::Unknown { .. } => 10,
                 SecretKeyMaterial::MLDSA65_Ed25519 { .. } => 11,
                 SecretKeyMaterial::MLDSA87_Ed448 { .. } => 12,
+                SecretKeyMaterial::SLHDSA128s { .. } => 13,
+                SecretKeyMaterial::SLHDSA128f { .. } => 14,
+                SecretKeyMaterial::SLHDSA256s { .. } => 15,
             }
         }
 
@@ -1158,6 +1251,15 @@ impl Ord for SecretKeyMaterial {
                     .chain(iter::once(m0.cmp(m1)))
                     .fold(Ordering::Equal, |acc, x| acc.then(x)),
 
+            (SecretKeyMaterial::SLHDSA128s { secret: s0 },
+             SecretKeyMaterial::SLHDSA128s { secret: s1 }) => s0.cmp(s1),
+
+            (SecretKeyMaterial::SLHDSA128f { secret: s0 },
+             SecretKeyMaterial::SLHDSA128f { secret: s1 }) => s0.cmp(s1),
+
+            (SecretKeyMaterial::SLHDSA256s { secret: s0 },
+             SecretKeyMaterial::SLHDSA256s { secret: s1 }) => s0.cmp(s1),
+
             (&SecretKeyMaterial::Unknown{ mpis: ref mpis1, rest: ref rest1 }
             ,&SecretKeyMaterial::Unknown{ mpis: ref mpis2, rest: ref rest2 }) => {
                 let o1 = secure_cmp(rest1, rest2);
@@ -1209,6 +1311,9 @@ impl SecretKeyMaterial {
             Ed448 { .. } => Some(PublicKeyAlgorithm::Ed448),
             MLDSA65_Ed25519 { .. } => Some(PublicKeyAlgorithm::MLDSA65_Ed25519),
             MLDSA87_Ed448 { .. } => Some(PublicKeyAlgorithm::MLDSA87_Ed448),
+            SLHDSA128s { .. } => Some(PublicKeyAlgorithm::SLHDSA128s),
+            SLHDSA128f { .. } => Some(PublicKeyAlgorithm::SLHDSA128f),
+            SLHDSA256s { .. } => Some(PublicKeyAlgorithm::SLHDSA256s),
             Unknown { .. } => None,
         }
     }
@@ -1274,6 +1379,18 @@ impl SecretKeyMaterial {
             MLDSA87_Ed448 => Ok(SecretKeyMaterial::MLDSA87_Ed448 {
                 eddsa: arbitrarize(g, vec![0; 57]).into(),
                 mldsa: arbitrarize(g, vec![0; 32]).into(),
+            }),
+
+            SLHDSA128s => Ok(SecretKeyMaterial::SLHDSA128s {
+                secret: arbitrarize(g, [0; 64]).into(),
+            }),
+
+            SLHDSA128f => Ok(SecretKeyMaterial::SLHDSA128f {
+                secret: arbitrarize(g, [0; 64]).into(),
+            }),
+
+            SLHDSA256s => Ok(SecretKeyMaterial::SLHDSA256s {
+                secret: arbitrarize(g, [0; 128]).into(),
             }),
 
             Private(_) | Unknown(_) =>
@@ -1572,6 +1689,24 @@ pub enum Signature {
         mldsa: Box<[u8; 4627]>,
     },
 
+    /// SLH-DSA-SHAKE-128s signature.
+    SLHDSA128s {
+        /// The signature, an opaque string.
+        sig: Box<[u8; 7856]>,
+    },
+
+    /// SLH-DSA-SHAKE-128f signature.
+    SLHDSA128f {
+        /// The signature, an opaque string.
+        sig: Box<[u8; 17088]>,
+    },
+
+    /// SLH-DSA-SHAKE-256s signature.
+    SLHDSA256s {
+        /// The signature, an opaque string.
+        sig: Box<[u8; 29792]>,
+    },
+
     /// Unknown number of MPIs for an unknown algorithm.
     Unknown {
         /// The successfully parsed MPIs.
@@ -1634,6 +1769,21 @@ impl fmt::Debug for Signature {
                 f.debug_struct("MLDSA87_Ed448")
                 .field("eddsa", &hex::encode(&eddsa[..]))
                 .field("mldsa", &hex::encode(&mldsa[..]))
+                .finish(),
+
+            Signature::SLHDSA128s { sig } =>
+                f.debug_struct("SLHDSA128s")
+                .field("sig", &hex::encode(sig.as_ref()))
+                .finish(),
+
+            Signature::SLHDSA128f { sig } =>
+                f.debug_struct("SLHDSA128f")
+                .field("sig", &hex::encode(sig.as_ref()))
+                .finish(),
+
+            Signature::SLHDSA256s { sig } =>
+                f.debug_struct("SLHDSA256s")
+                .field("sig", &hex::encode(sig.as_ref()))
                 .finish(),
 
             Signature::Unknown { mpis, rest } =>
@@ -1799,6 +1949,13 @@ mod tests {
                     Signature::parse(MLDSA65_Ed25519, cur).unwrap(),
                 Signature::MLDSA87_Ed448 { .. } =>
                     Signature::parse(MLDSA87_Ed448, cur).unwrap(),
+
+                Signature::SLHDSA128s { .. } =>
+                    Signature::parse(SLHDSA128s, cur).unwrap(),
+                Signature::SLHDSA128f { .. } =>
+                    Signature::parse(SLHDSA128f, cur).unwrap(),
+                Signature::SLHDSA256s { .. } =>
+                    Signature::parse(SLHDSA256s, cur).unwrap(),
 
                 Signature::Unknown { .. } => unreachable!(),
             };
