@@ -3,59 +3,40 @@ use std::borrow::Cow;
 use crate::{Error, Result};
 
 use crate::crypto::{
+    AEADAlgorithm,
     SymmetricAlgorithm,
     self,
     mem::Protected,
     symmetric::{BlockCipherMode, Context},
 };
 
-use openssl::cipher::{Cipher, CipherRef};
-use openssl::cipher_ctx::CipherCtx;
+use ossl::cipher::{
+    AeadParams,
+    AesSize,
+    EncAlg,
+    OsslCipher,
+};
 
 impl crypto::backend::interface::Symmetric for super::Backend {
     fn supports_algo(algo: SymmetricAlgorithm) -> bool {
-        let cipher: &CipherRef = if let Ok(cipher) = algo.make_cfb_cipher() {
-            cipher
-        } else {
-            return false;
-        };
-
-        let mut ctx = if let Ok(ctx) = CipherCtx::new() {
-            ctx
-        } else {
-            return false;
-        };
-        ctx.encrypt_init(Some(cipher), None, None).is_ok()
+        let key = vec![0; algo.key_size().unwrap_or(0)].into();
+        Self::encryptor_impl(algo, BlockCipherMode::ECB, &key,
+                             Cow::Borrowed(&[])).is_ok()
     }
 
     fn encryptor_impl(algo: SymmetricAlgorithm, mode: BlockCipherMode,
 		      key: &Protected, iv: Cow<'_, [u8]>)
                       -> Result<Box<dyn Context>>
     {
-        #[allow(deprecated)]
         match mode {
-            BlockCipherMode::CFB => {
-                let cipher = algo.make_cfb_cipher()?;
-                let mut ctx = CipherCtx::new()?;
-                ctx.encrypt_init(Some(cipher), Some(key), Some(&iv))?;
-                Ok(Box::new(OpenSslMode::new(ctx)))
-            },
+            BlockCipherMode::CFB =>
+                Ok(Box::new(OpenSslMode::new(algo, mode, None, true, key, Some(iv))?)),
 
-            BlockCipherMode::CBC => {
-                let cipher = algo.make_cbc_cipher()?;
-                let mut ctx = CipherCtx::new()?;
-                ctx.encrypt_init(Some(cipher), Some(key), Some(&iv))?;
-                ctx.set_padding(false);
-                Ok(Box::new(OpenSslMode::new(ctx)))
-            },
+            BlockCipherMode::CBC =>
+                Ok(Box::new(OpenSslMode::new(algo, mode, Some(false), true, key, Some(iv))?)),
 
-            BlockCipherMode::ECB => {
-                let cipher = algo.make_ecb_cipher()?;
-                let mut ctx = CipherCtx::new()?;
-                ctx.encrypt_init(Some(cipher), Some(key), None)?;
-                ctx.set_padding(false);
-                Ok(Box::new(OpenSslMode::new(ctx)))
-            },
+            BlockCipherMode::ECB =>
+                Ok(Box::new(OpenSslMode::new(algo, mode, Some(false), true, key, None)?)),
         }
     }
 
@@ -63,41 +44,104 @@ impl crypto::backend::interface::Symmetric for super::Backend {
 		      key: &Protected, iv: Cow<'_, [u8]>)
                       -> Result<Box<dyn Context>>
     {
-        #[allow(deprecated)]
         match mode {
-            BlockCipherMode::CFB => {
-                let cipher = algo.make_cfb_cipher()?;
-                let mut ctx = CipherCtx::new()?;
-                ctx.decrypt_init(Some(cipher), Some(key), Some(&iv))?;
-                Ok(Box::new(OpenSslMode::new(ctx)))
-            },
+            BlockCipherMode::CFB =>
+                Ok(Box::new(OpenSslMode::new(algo, mode, None, false, key, Some(iv))?)),
 
-            BlockCipherMode::CBC => {
-                let cipher = algo.make_cbc_cipher()?;
-                let mut ctx = CipherCtx::new()?;
-                ctx.decrypt_init(Some(cipher), Some(key), Some(&iv))?;
-                ctx.set_padding(false);
-                Ok(Box::new(OpenSslMode::new(ctx)))
-            },
+            BlockCipherMode::CBC =>
+                Ok(Box::new(OpenSslMode::new(algo, mode, Some(false), false, key, Some(iv))?)),
 
-            BlockCipherMode::ECB => {
-                let cipher = algo.make_ecb_cipher()?;
-                let mut ctx = CipherCtx::new()?;
-                ctx.decrypt_init(Some(cipher), Some(key), None)?;
-                ctx.set_padding(false);
-                Ok(Box::new(OpenSslMode::new(ctx)))
-            },
+            BlockCipherMode::ECB =>
+                Ok(Box::new(OpenSslMode::new(algo, mode, Some(false), false, key, None)?)),
         }
     }
 }
 
-struct OpenSslMode {
-    ctx: CipherCtx,
+#[derive(Debug)]
+pub enum OsslMode {
+    Unauthenticated(BlockCipherMode),
+    Authenticated(AEADAlgorithm, Vec<u8>),
+}
+
+impl From<BlockCipherMode> for OsslMode {
+    fn from(v: BlockCipherMode) -> Self {
+        OsslMode::Unauthenticated(v)
+    }
+}
+
+#[derive(Debug)]
+pub struct OpenSslMode {
+    pub ctx: OsslCipher,
 }
 
 impl OpenSslMode {
-    fn new(ctx: CipherCtx) -> Self {
-        Self { ctx }
+    pub fn new(algo: SymmetricAlgorithm,
+               mode: impl Into<OsslMode>,
+               padding: Option<bool>,
+               enc: bool,
+               key: &Protected,
+               iv: Option<Cow<'_, [u8]>>) -> Result<Self>
+    {
+        let ctx = super::context();
+
+        use SymmetricAlgorithm::*;
+        use AEADAlgorithm::*;
+        use BlockCipherMode::*;
+        let (alg, aead) = match (algo, mode.into()) {
+            (AES128, OsslMode::Unauthenticated(CFB)) =>
+                (EncAlg::AesCfb128(AesSize::Aes128), None),
+            (AES192, OsslMode::Unauthenticated(CFB)) =>
+                (EncAlg::AesCfb128(AesSize::Aes192), None),
+            (AES256, OsslMode::Unauthenticated(CFB)) =>
+                (EncAlg::AesCfb128(AesSize::Aes256), None),
+
+            (AES128, OsslMode::Unauthenticated(CBC)) =>
+                (EncAlg::AesCbc(AesSize::Aes128), None),
+            (AES192, OsslMode::Unauthenticated(CBC)) =>
+                (EncAlg::AesCbc(AesSize::Aes192), None),
+            (AES256, OsslMode::Unauthenticated(CBC)) =>
+                (EncAlg::AesCbc(AesSize::Aes256), None),
+
+            (AES128, OsslMode::Unauthenticated(ECB)) =>
+                (EncAlg::AesEcb(AesSize::Aes128), None),
+            (AES192, OsslMode::Unauthenticated(ECB)) =>
+                (EncAlg::AesEcb(AesSize::Aes192), None),
+            (AES256, OsslMode::Unauthenticated(ECB)) =>
+                (EncAlg::AesEcb(AesSize::Aes256), None),
+
+            (AES128, OsslMode::Authenticated(OCB, aad)) =>
+                (EncAlg::AesOcb(AesSize::Aes128), Some(AeadParams::new(Some(aad), OCB.digest_size()?, 0))),
+            (AES192, OsslMode::Authenticated(OCB, aad)) =>
+                (EncAlg::AesOcb(AesSize::Aes192), Some(AeadParams::new(Some(aad), OCB.digest_size()?, 0))),
+            (AES256, OsslMode::Authenticated(OCB, aad)) =>
+                (EncAlg::AesOcb(AesSize::Aes256), Some(AeadParams::new(Some(aad), OCB.digest_size()?, 0))),
+
+            (AES128, OsslMode::Authenticated(GCM, aad)) =>
+                (EncAlg::AesGcm(AesSize::Aes128), Some(AeadParams::new(Some(aad), GCM.digest_size()?, 0))),
+            (AES192, OsslMode::Authenticated(GCM, aad)) =>
+                (EncAlg::AesGcm(AesSize::Aes192), Some(AeadParams::new(Some(aad), GCM.digest_size()?, 0))),
+            (AES256, OsslMode::Authenticated(GCM, aad)) =>
+                (EncAlg::AesGcm(AesSize::Aes256), Some(AeadParams::new(Some(aad), GCM.digest_size()?, 0))),
+
+            (a, OsslMode::Unauthenticated(_)) => return Err(
+                Error::UnsupportedSymmetricAlgorithm(a).into()),
+            (_, OsslMode::Authenticated(a, _)) => return Err(
+                Error::UnsupportedAEADAlgorithm(a).into()),
+        };
+
+        let mut ctx = OsslCipher::new(
+            &ctx,
+            alg,
+            enc,
+            key.into(),
+            iv.map(|iv| iv.to_vec()),
+            aead)?;
+
+        if let Some(p) = padding {
+            ctx.set_padding(p)?;
+        }
+
+        Ok(Self { ctx })
     }
 }
 
@@ -107,13 +151,13 @@ impl Context for OpenSslMode {
         // "streaming" (such as CFB mode) the block size will be
         // always "1" instead of the real block size of the underlying
         // cipher.
-        let block_size = self.ctx.block_size();
-
-        // SAFETY: If this is a block cipher we require the source length
-        // to be a multiple of the block size.
-        if block_size > 1 && src.len() % block_size > 0 {
-            return Err(Error::InvalidArgument(
-                "src needs to be a multiple of the block size".into()).into());
+        if let Some(block_size) = self.ctx.block_size() {
+            // SAFETY: If this is a block cipher we require the source length
+            // to be a multiple of the block size.
+            if block_size > 1 && src.len() % block_size > 0 {
+                return Err(Error::InvalidArgument(
+                    "src needs to be a multiple of the block size".into()).into());
+            }
         }
 
         // SAFETY: `dst` must be big enough to hold decrypted data.
@@ -131,129 +175,12 @@ impl Context for OpenSslMode {
         //   are a multiple of the block size, and we don't use any
         //   padding.
         debug_assert_eq!(dst.len(), src.len());
-        unsafe {
-            self.ctx.cipher_update_unchecked(src, Some(dst))?;
-        }
+        self.ctx.update(src, dst)?;
 
         Ok(())
     }
 
     fn decrypt(&mut self, dst: &mut [u8], src: &[u8]) -> Result<()> {
         self.encrypt(dst, src)
-    }
-}
-
-impl SymmetricAlgorithm {
-    fn make_cfb_cipher(self) -> Result<&'static CipherRef> {
-        #[allow(deprecated)]
-        Ok(match self {
-            #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
-            SymmetricAlgorithm::IDEA => Cipher::idea_cfb64(),
-
-            SymmetricAlgorithm::AES128 => Cipher::aes_128_cfb128(),
-            SymmetricAlgorithm::AES192 => Cipher::aes_192_cfb128(),
-            SymmetricAlgorithm::AES256 => Cipher::aes_256_cfb128(),
-
-            SymmetricAlgorithm::TripleDES => Cipher::des_ede3_cfb64(),
-
-            #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
-            SymmetricAlgorithm::Camellia128 => Cipher::camellia128_cfb128(),
-            #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
-            SymmetricAlgorithm::Camellia192 => Cipher::camellia192_cfb128(),
-            #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
-            SymmetricAlgorithm::Camellia256 => Cipher::camellia256_cfb128(),
-
-            #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
-            SymmetricAlgorithm::Blowfish => Cipher::bf_cfb64(),
-
-            #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
-            SymmetricAlgorithm::CAST5 => Cipher::cast5_cfb64(),
-            _ => return Err(Error::UnsupportedSymmetricAlgorithm(self))?,
-        })
-    }
-
-    fn make_cbc_cipher(self) -> Result<&'static CipherRef> {
-        #[allow(deprecated)]
-        Ok(match self {
-            #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
-            SymmetricAlgorithm::IDEA => Cipher::idea_cbc(),
-
-            SymmetricAlgorithm::AES128 => Cipher::aes_128_cbc(),
-            SymmetricAlgorithm::AES192 => Cipher::aes_192_cbc(),
-            SymmetricAlgorithm::AES256 => Cipher::aes_256_cbc(),
-
-            SymmetricAlgorithm::TripleDES => Cipher::des_ede3_cbc(),
-
-            #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
-            SymmetricAlgorithm::Camellia128 => Cipher::camellia128_cbc(),
-            #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
-            SymmetricAlgorithm::Camellia192 => Cipher::camellia192_cbc(),
-            #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
-            SymmetricAlgorithm::Camellia256 => Cipher::camellia256_cbc(),
-
-            #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
-            SymmetricAlgorithm::Blowfish => Cipher::bf_cbc(),
-
-            #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
-            SymmetricAlgorithm::CAST5 => Cipher::cast5_cbc(),
-            _ => return Err(Error::UnsupportedSymmetricAlgorithm(self))?,
-        })
-    }
-
-    fn make_ecb_cipher(self) -> Result<&'static CipherRef> {
-        #[allow(deprecated)]
-        Ok(match self {
-            #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
-            SymmetricAlgorithm::IDEA => Cipher::idea_ecb(),
-
-            SymmetricAlgorithm::AES128 => Cipher::aes_128_ecb(),
-            SymmetricAlgorithm::AES192 => Cipher::aes_192_ecb(),
-            SymmetricAlgorithm::AES256 => Cipher::aes_256_ecb(),
-
-            SymmetricAlgorithm::TripleDES => Cipher::des_ede3_ecb(),
-
-            #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
-            SymmetricAlgorithm::Camellia128 => Cipher::camellia128_ecb(),
-            #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
-            SymmetricAlgorithm::Camellia192 => Cipher::camellia192_ecb(),
-            #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
-            SymmetricAlgorithm::Camellia256 => Cipher::camellia256_ecb(),
-
-            #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
-            SymmetricAlgorithm::Blowfish => Cipher::bf_ecb(),
-
-            #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
-            SymmetricAlgorithm::CAST5 => Cipher::cast5_ecb(),
-            _ => Err(Error::UnsupportedSymmetricAlgorithm(self))?,
-        })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// Anchors the constants used in Sequoia with the ones from
-    /// OpenSSL.
-    #[test]
-    fn key_size() -> Result<()> {
-        for a in SymmetricAlgorithm::variants() {
-            if let Ok(cipher) = a.make_cfb_cipher() {
-                assert_eq!(a.key_size()?, cipher.key_length());
-            }
-        }
-        Ok(())
-    }
-
-    /// Anchors the constants used in Sequoia with the ones from
-    /// OpenSSL.
-    #[test]
-    fn block_size() -> Result<()> {
-        for a in SymmetricAlgorithm::variants() {
-            if let Ok(cipher) = a.make_ecb_cipher() {
-                assert_eq!(a.block_size()?, cipher.block_size());
-            }
-        }
-        Ok(())
     }
 }

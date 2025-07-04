@@ -45,13 +45,7 @@ sha1collisiondetection = { version = "0.3.1", default-features = false, features
 thiserror = ">=1, <3"
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
 
-# At least 0.10.55 is needed due `no-ocb` check:
-# https://github.com/sfackler/rust-openssl/blob/master/openssl/CHANGELOG.md
-openssl = { version = "0.10.55", optional = true }
-# We need to directly depend on the sys crate so that the metadata produced
-# in its build script is passed to sequoia-openpgp's build script
-# see: https://doc.rust-lang.org/cargo/reference/build-scripts.html#the-links-manifest-key
-openssl-sys = { version = "0.9.90", optional = true }
+ossl = { version = "1.3.1", features = ["dynamic", "rfc9580"], optional = true }
 
 # Botan.
 botan = { version = ">= 0.10.6, < 0.12", optional = true }
@@ -138,7 +132,7 @@ crypto-cng = [
     "dep:hkdf", "dep:sha2",
     "dep:ocb3",
 ]
-crypto-openssl = ["dep:openssl", "dep:openssl-sys"]
+crypto-openssl = ["dep:ossl"]
 crypto-botan = ["dep:botan", "botan?/botan3"]
 crypto-botan2 = ["dep:botan"]
 crypto-fuzzing = []

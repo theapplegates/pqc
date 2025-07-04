@@ -1,16 +1,16 @@
 //! Implementation of AEAD using OpenSSL cryptographic library.
 
-use crate::{Error, Result};
+use crate::Result;
 
 use crate::crypto::aead::{Context, CipherOp};
 use crate::crypto::mem::Protected;
 use crate::types::{AEADAlgorithm, SymmetricAlgorithm};
 
-use openssl::cipher::Cipher;
-use openssl::cipher_ctx::CipherCtx;
+use super::symmetric::{OpenSslMode, OsslMode};
 
+#[derive(Debug)]
 struct OpenSslContext {
-    ctx: CipherCtx,
+    ctx: OpenSslMode,
     digest_size: usize,
 }
 
@@ -18,12 +18,15 @@ impl Context for OpenSslContext {
     fn encrypt_seal(&mut self, dst: &mut [u8], src: &[u8]) -> Result<()> {
         debug_assert_eq!(dst.len(), src.len() + self.digest_size());
 
-        // SAFETY: Process completely one full chunk.  Since `update`
-        // is not being called again with partial block info and the
-        // cipher is finalized afterwards these two calls are safe.
-        let size = unsafe { self.ctx.cipher_update_unchecked(src, Some(dst))? };
-        unsafe { self.ctx.cipher_final_unchecked(&mut dst[size..])? };
-        self.ctx.tag(&mut dst[src.len()..])?;
+        // Split dst into ciphertext and tag.
+        let (ciphertext, tag) =
+            dst.split_at_mut(dst.len().saturating_sub(self.digest_size()));
+        debug_assert_eq!(ciphertext.len(), src.len());
+
+        let written = self.ctx.ctx.update(src, ciphertext)?;
+        self.ctx.ctx.finalize(&mut ciphertext[written..])?;
+        self.ctx.ctx.get_tag(tag)?;
+
         Ok(())
     }
 
@@ -32,18 +35,14 @@ impl Context for OpenSslContext {
         debug_assert_eq!(dst.len() + self.digest_size(), src.len());
 
         // Split src into ciphertext and tag.
-        let l = self.digest_size();
-        let ciphertext = &src[..src.len().saturating_sub(l)];
-        let tag = &src[src.len().saturating_sub(l)..];
+        let (ciphertext, tag) =
+            src.split_at(src.len().saturating_sub(self.digest_size()));
 
-        // SAFETY: Process completely one full chunk.  Since `update`
-        // is not being called again with partial block info and the
-        // cipher is finalized afterwards these two calls are safe.
-        let size = unsafe {
-            self.ctx.cipher_update_unchecked(ciphertext, Some(dst))?
-        };
-        self.ctx.set_tag(tag)?;
-        unsafe { self.ctx.cipher_final_unchecked(&mut dst[size..])? };
+        let written = self.ctx.ctx.update(ciphertext, dst)?;
+        self.ctx.ctx.set_tag(tag)?;
+        let finalized = self.ctx.ctx.finalize(&mut dst[written..])?;
+
+        debug_assert_eq!(written + finalized, dst.len());
         Ok(())
     }
 
@@ -60,7 +59,7 @@ impl crate::crypto::backend::interface::Aead for super::Backend {
         // First, check whether support is compiled in or not.
         (match algo {
             AEADAlgorithm::EAX => false,
-            AEADAlgorithm::OCB => cfg!(not(osslconf = "OPENSSL_NO_OCB")),
+            AEADAlgorithm::OCB => true,
             AEADAlgorithm::GCM => true,
             AEADAlgorithm::Private(_) |
             AEADAlgorithm::Unknown(_) => false,
@@ -123,75 +122,18 @@ impl crate::crypto::backend::interface::Aead for super::Backend {
         nonce: &[u8],
         op: CipherOp,
     ) -> Result<Box<dyn Context>> {
-        match algo {
-            #[cfg(not(osslconf = "OPENSSL_NO_OCB"))]
-            AEADAlgorithm::OCB => {
-                let cipher = match sym_algo {
-                    SymmetricAlgorithm::AES128 => Cipher::aes_128_ocb(),
-                    SymmetricAlgorithm::AES192 => Cipher::aes_192_ocb(),
-                    SymmetricAlgorithm::AES256 => Cipher::aes_256_ocb(),
-                    _ => return Err(Error::UnsupportedSymmetricAlgorithm(sym_algo).into()),
-                };
-                let mut ctx = CipherCtx::new()?;
+        Ok(Box::new(OpenSslContext {
+            ctx: OpenSslMode::new(
+                sym_algo,
+                OsslMode::Authenticated(algo, aad.to_vec()),
+                None,
                 match op {
-                    CipherOp::Encrypt =>
-                        ctx.encrypt_init(Some(cipher), Some(key), None)?,
-
-                    CipherOp::Decrypt =>
-                        ctx.decrypt_init(Some(cipher), Some(key), None)?,
-                }
-                // We have to set the IV length before supplying the
-                // IV.  Otherwise, it will be silently truncated.
-                ctx.set_iv_length(algo.nonce_size()?)?;
-                match op {
-                    CipherOp::Encrypt =>
-                        ctx.encrypt_init(None, None, Some(nonce))?,
-
-                    CipherOp::Decrypt =>
-                        ctx.decrypt_init(None, None, Some(nonce))?,
-                }
-                ctx.set_padding(false);
-                ctx.cipher_update(aad, None)?;
-                Ok(Box::new(OpenSslContext {
-                    ctx,
-                    digest_size: algo.digest_size()?,
-                }))
-            },
-
-            AEADAlgorithm::GCM => {
-                let cipher = match sym_algo {
-                    SymmetricAlgorithm::AES128 => Cipher::aes_128_gcm(),
-                    SymmetricAlgorithm::AES192 => Cipher::aes_192_gcm(),
-                    SymmetricAlgorithm::AES256 => Cipher::aes_256_gcm(),
-                    _ => return Err(Error::UnsupportedSymmetricAlgorithm(sym_algo).into()),
-                };
-                let mut ctx = CipherCtx::new()?;
-                match op {
-                    CipherOp::Encrypt =>
-                        ctx.encrypt_init(Some(cipher), Some(key), None)?,
-
-                    CipherOp::Decrypt =>
-                        ctx.decrypt_init(Some(cipher), Some(key), None)?,
-                }
-                // We have to set the IV length before supplying the
-                // IV.  Otherwise, it will be silently truncated.
-                ctx.set_iv_length(algo.nonce_size()?)?;
-                match op {
-                    CipherOp::Encrypt =>
-                        ctx.encrypt_init(None, None, Some(nonce))?,
-
-                    CipherOp::Decrypt =>
-                        ctx.decrypt_init(None, None, Some(nonce))?,
-                }
-                ctx.set_padding(false);
-                ctx.cipher_update(aad, None)?;
-                Ok(Box::new(OpenSslContext {
-                    ctx,
-                    digest_size: algo.digest_size()?,
-                }))
-            },
-
-            _ => Err(Error::UnsupportedAEADAlgorithm(algo).into()),
-        }
+                    CipherOp::Encrypt => true,
+                    CipherOp::Decrypt => false,
+                },
+                key,
+                Some(std::borrow::Cow::Borrowed(nonce)))?,
+            digest_size: algo.digest_size()?,
+        }))
     }
 }

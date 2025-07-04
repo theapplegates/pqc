@@ -1,18 +1,15 @@
 //! Elliptic Curve Diffie-Hellman.
-use std::convert::{TryFrom, TryInto};
 
+use crate::crypto::backend::openssl::asymmetric::wrong_key;
 use crate::crypto::ecdh::{decrypt_unwrap, encrypt_wrap};
 use crate::crypto::mpi;
 use crate::crypto::mpi::{Ciphertext, SecretKeyMaterial};
-use crate::crypto::SessionKey;
+use crate::crypto::{mem::Protected, SessionKey};
 use crate::packet::{key, Key};
 use crate::types::Curve;
 use crate::{Error, Result};
 
-use openssl::bn::{BigNum, BigNumContext};
-use openssl::derive::Deriver;
-use openssl::ec::{EcGroup, EcKey, EcPoint, PointConversionForm};
-use openssl::pkey::PKey;
+use ossl::pkey::{EccData, EvpPkey, PkeyData};
 
 /// Wraps a session key using Elliptic Curve Diffie-Hellman.
 pub fn encrypt<R>(
@@ -30,28 +27,32 @@ where
         return Err(Error::InvalidArgument("implemented elsewhere".into()).into());
     }
 
-    let nid = curve.try_into()?;
-    let group = EcGroup::from_curve_name(nid)?;
-    let mut ctx = BigNumContext::new()?;
-    let point = EcPoint::from_bytes(&group, q.value(), &mut ctx)?;
-    let recipient_key = EcKey::from_public_key(&group, &point)?;
-    let recipient_key = PKey::<_>::try_from(recipient_key)?;
+    let ctx = super::context();
 
-    let key = EcKey::generate(&group)?;
+    let mut public = EvpPkey::import(
+        &ctx, curve.try_into()?,
+        PkeyData::Ecc(EccData {
+            pubkey: Some(q.value().to_vec()),
+            prikey: None,
+        })
+    )?;
 
-    let q = mpi::MPI::new(&key.public_key().to_bytes(
-        &group,
-        PointConversionForm::UNCOMPRESSED,
-        &mut ctx,
-    )?);
+    let mut ephemeral = EvpPkey::generate(&ctx, curve.try_into()?)?;
 
-    let key = PKey::<_>::try_from(key)?;
-    let mut deriver = Deriver::new(&key)?;
-    deriver.set_peer(&recipient_key)?;
+    let mut deriver = ossl::derive::EcdhDerive::new(&ctx, &mut ephemeral)?;
+    let mut shared: Protected = vec![0; curve.field_size()?].into();
+    let size = deriver.derive(&mut public, &mut shared)?;
+    assert_eq!(shared.len(), size);
 
-    let secret = deriver.derive_to_vec()?.into();
+    let q = match ephemeral.export()? {
+        PkeyData::Ecc(EccData { ref pubkey, .. }) => {
+            pubkey.as_ref().expect("to be set").clone().into()
+        },
 
-    encrypt_wrap(recipient.role_as_subordinate(), session_key, q, &secret)
+        _ => return Err(wrong_key()),
+    };
+
+    encrypt_wrap(recipient.role_as_subordinate(), session_key, q, &shared)
 }
 
 /// Unwraps a session key using Elliptic Curve Diffie-Hellman.
@@ -79,23 +80,29 @@ where
         return Err(Error::InvalidArgument("implemented elsewhere".into()).into());
     }
 
-    let nid = curve.try_into()?;
-    let group = EcGroup::from_curve_name(nid)?;
-    let mut ctx = BigNumContext::new()?;
-    let point = EcPoint::from_bytes(&group, e.value(), &mut ctx)?;
+    let ctx = super::context();
 
-    let public_point = EcPoint::from_bytes(&group, q.value(), &mut ctx)?;
-    let scalar = BigNum::from_slice(scalar.value())?;
-    let key = EcKey::from_private_components(&group, &scalar, &public_point)?;
+    let mut ephemeral = EvpPkey::import(
+        &ctx, curve.try_into()?,
+        PkeyData::Ecc(EccData {
+            pubkey: Some(e.value().to_vec()),
+            prikey: None,
+        })
+    )?;
 
-    let recipient_key = EcKey::from_public_key(&group, &point)?;
-    let recipient_key = PKey::<_>::try_from(recipient_key)?;
+    let mut secret = EvpPkey::import(
+        &ctx, curve.try_into()?,
+        PkeyData::Ecc(EccData {
+            pubkey: Some(q.value().to_vec()),
+            prikey: Some(ossl::OsslSecret::from_slice(scalar.value())),
+        })
+    )?;
 
-    let key = PKey::<_>::try_from(key)?;
-    let mut deriver = Deriver::new(&key)?;
-    deriver.set_peer(&recipient_key)?;
-    let secret = deriver.derive_to_vec()?.into();
+    let mut deriver = ossl::derive::EcdhDerive::new(&ctx, &mut secret)?;
+    let mut shared: Protected = vec![0; curve.field_size()?].into();
+    let size = deriver.derive(&mut ephemeral, &mut shared)?;
+    assert_eq!(shared.len(), size);
 
-    decrypt_unwrap(recipient.role_as_unspecified(), &secret, ciphertext,
+    decrypt_unwrap(recipient.role_as_unspecified(), &shared, ciphertext,
                    plaintext_len)
 }
