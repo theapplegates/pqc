@@ -51,7 +51,7 @@ impl Asymmetric for super::Backend {
             SLHDSA128s | SLHDSA128f | SLHDSA256s =>
                 false,
             MLKEM768_X25519 | MLKEM1024_X448 =>
-                false,
+                true,
             ElGamalEncrypt | ElGamalEncryptSign |
             Private(_) | Unknown(_)
                 => false,
@@ -503,6 +503,144 @@ impl Asymmetric for super::Backend {
         let mut verifier = OsslSignature::new(
             &ctx, SigOp::Verify, SigAlg::Mldsa87, &mut key, None)?;
         Ok(verifier.verify(digest, Some(&signature[..])).is_ok())
+    }
+
+    /// Generates a ML-KEM-768 key pair.
+    fn mlkem768_generate_key() -> Result<(Protected, Box<[u8; 1184]>)> {
+        let ctx = super::context();
+
+        let key = EvpPkey::generate(&ctx, EvpPkeyType::MlKem768)?;
+        match key.export()? {
+            PkeyData::Mlkey(MlkeyData { ref pubkey, ref seed, .. }) => {
+                let pubkey = pubkey.as_ref().expect("to be set");
+                let mut public = Box::new([0; 1184]);
+                let l = public.len().min(pubkey.len());
+                public[..l].copy_from_slice(&pubkey[..l]);
+                Ok((seed.as_ref().ok_or_else(not_set)?.into(), public))
+            },
+            _ => Err(wrong_key()),
+        }
+    }
+
+    /// Generates and encapsulates a secret using ML-KEM-768.
+    fn mlkem768_encapsulate(public: &[u8; 1184])
+                            -> Result<(Box<[u8; 1088]>, Protected)>
+    {
+        let ctx = super::context();
+
+        let mut key = EvpPkey::import(
+            &ctx, EvpPkeyType::MlKem768,
+            PkeyData::Mlkey(MlkeyData {
+                pubkey: Some(public.to_vec()),
+                prikey: None,
+                seed: None,
+            })
+        )?;
+
+        let mut encryptor = OsslAsymcipher::new(
+            &ctx, EncOp::Encapsulate, &mut key, None)?;
+        let mut ciphertext = Protected::from(vec![0; 1088]);
+        let (keyshare, l) =
+            encryptor.encapsulate(&mut ciphertext)?;
+        debug_assert_eq!(l, 1088);
+        debug_assert_eq!(ciphertext.len(), l);
+        let mut boxed_ciphertext = Box::new([0; 1088]);
+        boxed_ciphertext.copy_from_slice(&ciphertext);
+
+        Ok((boxed_ciphertext, Protected::from(keyshare)))
+    }
+
+    /// Decapsulates a secret using ML-KEM-768.
+    fn mlkem768_decapsulate(secret: &Protected,
+                            ciphertext: &[u8; 1088])
+                            -> Result<Protected>
+    {
+        let ctx = super::context();
+
+        let mut key = EvpPkey::import(
+            &ctx, EvpPkeyType::MlKem768,
+            PkeyData::Mlkey(MlkeyData {
+                pubkey: None,
+                prikey: None,
+                seed: Some(secret.into()),
+            })
+        )?;
+
+        let mut encryptor = OsslAsymcipher::new(
+            &ctx, EncOp::Decapsulate, &mut key, None)?;
+        let keyshare = encryptor.decapsulate(&ciphertext[..])?;
+        debug_assert_eq!(keyshare.len(), 32);
+
+        Ok(keyshare.into())
+    }
+
+    /// Generates a ML-KEM-1024 key pair.
+    fn mlkem1024_generate_key() -> Result<(Protected, Box<[u8; 1568]>)> {
+        let ctx = super::context();
+
+        let key = EvpPkey::generate(&ctx, EvpPkeyType::MlKem1024)?;
+        match key.export()? {
+            PkeyData::Mlkey(MlkeyData { ref pubkey, ref seed, .. }) => {
+                let pubkey = pubkey.as_ref().expect("to be set");
+                let mut public = Box::new([0; 1568]);
+                let l = public.len().min(pubkey.len());
+                public[..l].copy_from_slice(&pubkey[..l]);
+                Ok((seed.as_ref().ok_or_else(not_set)?.into(), public))
+            },
+            _ => Err(wrong_key()),
+        }
+    }
+
+    /// Generates and encapsulates a secret using ML-KEM-1024.
+    fn mlkem1024_encapsulate(public: &[u8; 1568])
+                             -> Result<(Box<[u8; 1568]>, Protected)>
+    {
+        let ctx = super::context();
+
+        let mut key = EvpPkey::import(
+            &ctx, EvpPkeyType::MlKem1024,
+            PkeyData::Mlkey(MlkeyData {
+                pubkey: Some(public.to_vec()),
+                prikey: None,
+                seed: None,
+            })
+        )?;
+
+        let mut encryptor = OsslAsymcipher::new(
+            &ctx, EncOp::Encapsulate, &mut key, None)?;
+        let mut ciphertext = Protected::from(vec![0; 1568]);
+        let (keyshare, l) =
+            encryptor.encapsulate(&mut ciphertext)?;
+        debug_assert_eq!(l, 1568);
+        debug_assert_eq!(ciphertext.len(), l);
+        let mut boxed_ciphertext = Box::new([0; 1568]);
+        boxed_ciphertext.copy_from_slice(&ciphertext);
+
+        Ok((boxed_ciphertext, Protected::from(keyshare)))
+    }
+
+    /// Decapsulates a secret using ML-KEM-1024.
+    fn mlkem1024_decapsulate(secret: &Protected,
+                             ciphertext: &[u8; 1568])
+                             -> Result<Protected>
+    {
+        let ctx = super::context();
+
+        let mut key = EvpPkey::import(
+            &ctx, EvpPkeyType::MlKem1024,
+            PkeyData::Mlkey(MlkeyData {
+                pubkey: None,
+                prikey: None,
+                seed: Some(secret.into()),
+            })
+        )?;
+
+        let mut encryptor = OsslAsymcipher::new(
+            &ctx, EncOp::Decapsulate, &mut key, None)?;
+        let keyshare = encryptor.decapsulate(&ciphertext[..])?;
+        debug_assert_eq!(keyshare.len(), 32);
+
+        Ok(keyshare.into())
     }
 }
 
