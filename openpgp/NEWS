@@ -12,6 +12,19 @@
      RedHat systems, which caused the memory encryption module to
      abort the process because it relied on OCB being always available.
 
+   - The `aes_key_unwrap` function would panic if passed a ciphertext
+     that was too short.  In a debug build, it would panic due to a
+     subtraction underflow.  In a release build, it would use the
+     small negative quantity to allocate a vector.  Since the
+     allocator expects an unsigned quantity, the negative value would
+     be interpreted as a huge allocation.  The allocator would then
+     fail to allocate the memory and panic.
+
+     An attacker could trigger this panic by sending a victim an
+     encrypted message whose PKESK or SKESK packet has been specially
+     modified.  When the victim decrypts the message, the program
+     would crash.
+
 ** New functionality
    - crypto::symmetric::Encryptor
    - crypto::symmetric::Decryptor
