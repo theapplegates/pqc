@@ -7,6 +7,12 @@
 * Changes in 2.2.0
 ** Notable changes
    - Our MSRV is now 1.85.
+   - We are now using the ossl OpenSSL bindings instead of the
+     rust-openssl bindings.  The ossl OpenSSL bindings use OpenSSL's
+     v3 API and includes support for Post-Quantum algorithms like
+     ML-DSA, SLH-DSA, and ML-KEM.  In terms of algorithm coverage,
+     ossl does not currently include support for RipeMD160, but it
+     brings support for CAST5 and Blowfish.
 
 * Changes in 2.1.0
 ** Notable fixes
