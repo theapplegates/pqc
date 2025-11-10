@@ -1583,7 +1583,7 @@ impl<'a> Policy for StandardPolicy<'a> {
                     Curve::BrainpoolP256 => AsymmetricAlgorithm::BrainpoolP256,
                     Curve::BrainpoolP384 => AsymmetricAlgorithm::BrainpoolP384,
                     Curve::BrainpoolP512 => AsymmetricAlgorithm::BrainpoolP512,
-                    Curve::Ed25519 => AsymmetricAlgorithm::Cv25519,
+                    Curve::Ed25519 => AsymmetricAlgorithm::EdDSA,
                     Curve::Cv25519 => AsymmetricAlgorithm::Cv25519,
                     Curve::Unknown(_) => AsymmetricAlgorithm::Unknown,
                 }
