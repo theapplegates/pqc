@@ -22,7 +22,7 @@ gitlab = { repository = "sequoia-pgp/sequoia" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-sequoia-openpgp = { version = "2", path = "../openpgp", default-features = false }
+sequoia-openpgp = { version = "2.2.0-pqc", path = "../openpgp", default-features = false }
 
 anyhow = "1.0.18"
 futures-util = "0.3.5"
@@ -54,11 +54,11 @@ bench = false
 
 # Enables a crypto backend for the tests:
 [target.'cfg(not(windows))'.dev-dependencies]
-sequoia-openpgp = { version = "2", path = "../openpgp", default-features = false, features = ["crypto-nettle", "__implicit-crypto-backend-for-tests"] }
+sequoia-openpgp = { version = "2.2.0-pqc", path = "../openpgp", default-features = false, features = ["crypto-nettle", "__implicit-crypto-backend-for-tests"] }
 
 # Enables a crypto backend for the tests:
 [target.'cfg(windows)'.dev-dependencies]
-sequoia-openpgp = { version = "2", path = "../openpgp", default-features = false, features = ["crypto-cng", "__implicit-crypto-backend-for-tests"] }
+sequoia-openpgp = { version = "2.2.0-pqc", path = "../openpgp", default-features = false, features = ["crypto-cng", "__implicit-crypto-backend-for-tests"] }
 
 # Enables a crypto backend for the docs.rs generation:
 [package.metadata.docs.rs]
