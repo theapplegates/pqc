@@ -396,6 +396,32 @@ assert_send_and_sync!(KeyBlueprint);
 /// # Ok(())
 /// # }
 /// ```
+///
+/// Generate a general-purpose certificate that uses post-quantum
+/// cryptography.  To do this, we select a post-quantum cipher suite,
+/// and we use the RFC 9580 profile, which is required for a
+/// post-quantum resistant certificate.
+///
+/// ```
+/// use sequoia_openpgp as openpgp;
+/// use openpgp::Profile;
+/// use openpgp::cert::CertBuilder;
+/// use openpgp::cert::CipherSuite;
+/// # use openpgp::types::PublicKeyAlgorithm;
+///
+/// # fn main() -> openpgp::Result<()> {
+/// # if ! PublicKeyAlgorithm::MLDSA65_Ed25519.is_supported()
+/// #     || ! PublicKeyAlgorithm::MLKEM768_X25519.is_supported()
+/// # {
+/// #     return Ok(());
+/// # }
+/// let (cert, rev) = CertBuilder::general_purpose(Some("<post-quantum@example.org>"))
+///     .set_profile(Profile::RFC9580)?
+///     .set_cipher_suite(CipherSuite::MLDSA65_Ed25519)
+///     .generate()?;
+/// # Ok(())
+/// # }
+/// ```
 pub struct CertBuilder<'a> {
     creation_time: Option<std::time::SystemTime>,
     ciphersuite: CipherSuite,
