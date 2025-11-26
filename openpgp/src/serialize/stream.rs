@@ -3289,6 +3289,8 @@ impl<'a, 'b> writer::Stackable<'a, Cookie> for Encryptor<'a, 'b>
 #[cfg(test)]
 mod test {
     use std::io::Read;
+    use crate::parse::stream::VerifierBuilder;
+    use crate::types::PublicKeyAlgorithm;
     use crate::{Packet, PacketPile, Profile, packet::CompressedData};
     use crate::parse::{Parse, PacketParserResult, PacketParser};
     use super::*;
@@ -4547,4 +4549,124 @@ mod test {
         }
         Ok(())
     }
+
+    #[test]
+    fn test_custom_algo_combination_for_encryption() -> Result<()> {
+        use crate::policy::StandardPolicy;
+        use crate::parse::stream::{
+            DecryptorBuilder,
+            test::VHelper,
+        };
+
+        let test_message = b"Hello World";
+        let p = &StandardPolicy::new();
+
+        let (cert, _) = CertBuilder::new()
+            .set_profile(Profile::RFC9580)?
+            .set_signing_algorithm(crypto::PublicKeyAlgorithm::ECDSA, Some(crypto::Curve::NistP256), None)
+            .set_encryption_algorithm(crypto::PublicKeyAlgorithm::MLKEM1024_X448, None, None)
+            .add_transport_encryption_subkey()
+            .add_signing_subkey()
+            .generate()?;
+
+        let vc = cert.with_policy(p, None)?;
+
+        let keys: Vec<_> = vc
+            .keys()
+            .supported()
+            .alive()
+            .revoked(false)
+            .for_transport_encryption()
+            .collect();
+
+        let mut encrypted = Vec::new();
+        let message = Message::new(&mut encrypted);
+        let message = Encryptor::for_recipients(message, keys).build()?;
+        let mut message = LiteralWriter::new(message).build()?;
+
+        message.write_all(test_message)?;
+        message.finalize()?;
+
+        assert_ne!(test_message, encrypted.as_slice());
+
+        // decrypt
+        let vhelper = VHelper::for_decryption(
+            0, 0, 0, 0, Vec::new(), vec![cert], Vec::new());
+        let mut decryptor = DecryptorBuilder::from_bytes(&encrypted)?
+            .with_policy(p, None, vhelper)?;
+        assert!(decryptor.message_processed());
+
+        let mut decrypted = Vec::new();
+        decryptor.read_to_end(&mut decrypted).unwrap();
+        assert_eq!(test_message, decrypted.as_slice());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_custom_algo_combination_for_signing() -> Result<()> {
+        use crate::policy::StandardPolicy;
+        use crate::parse::stream::{
+            VerifierBuilder,
+            test::VHelper,
+        };
+
+        let test_message = b"Hello World";
+        let p = &StandardPolicy::new();
+
+        let (cert, _) = CertBuilder::new()
+            .set_profile(Profile::RFC9580)?
+            .set_signing_algorithm(crypto::PublicKeyAlgorithm::ECDSA, Some(crypto::Curve::NistP256), None)
+            .set_encryption_algorithm(crypto::PublicKeyAlgorithm::MLKEM1024_X448, None, None)
+            .add_transport_encryption_subkey()
+            .add_signing_subkey()
+            .generate()?;
+
+        let vc = cert.with_policy(p, None)?;
+
+        let key_pair = vc
+                .keys()
+                .secret()
+                .supported()
+                .alive()
+                .revoked(false)
+                .for_signing()
+                .nth(0).unwrap()
+                .key().clone().into_keypair()?;
+
+
+        let mut signed = Vec::new();
+        let message = Message::new(&mut signed);
+        let message = Signer::new(message, key_pair)?
+            .build()?;
+        let mut message = LiteralWriter::new(message).build()?;
+
+        message.write_all(test_message)?;
+        message.finalize()?;
+
+        let pp = crate::PacketPile::from_bytes(&signed)?;
+        for packet in pp.children() {
+            match packet {
+                Packet::Signature(sig) => {
+                    assert_eq!(sig.pk_algo(), PublicKeyAlgorithm::ECDSA);
+                },
+                _ => { }
+            }
+        }
+
+        // verify
+        let vhelper = VHelper::new(
+            1, 0, 0, 0, vec![cert]);
+        let mut verifier = VerifierBuilder::from_bytes(&signed)?
+            .with_policy(p, None, vhelper)?;
+        assert!(verifier.message_processed());
+
+        let mut content = Vec::new();
+        verifier.read_to_end(&mut content).unwrap();
+        assert_eq!(test_message, content.as_slice());
+
+        Ok(())
+    }
+
+
 }
