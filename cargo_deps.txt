@@ -1,0 +1,26 @@
+# Add these dependencies to: openpgp/Cargo.toml
+# Find the [dependencies] section and add/update:
+
+# SLH-DSA for PQC support (used with crypto-openssl backend)
+slh-dsa = { version = "0.0.3", optional = true }
+signature = {
+    version = "2.2",
+    optional = true,
+    features = ["rand_core", "std"]
+}
+
+# SHA3 for KDF in composite PQC algorithms
+sha3 = { version = "0.10", optional = true }
+
+# AES for session key wrapping in PQC
+aes = { version = "0.8", optional = true }
+
+# Then update the crypto-openssl feature to include new dependencies:
+[features]
+crypto-openssl = [
+    "dep:ossl",
+    "dep:slh-dsa",
+    "dep:signature",
+    "dep:sha3",
+    "dep:aes"
+]

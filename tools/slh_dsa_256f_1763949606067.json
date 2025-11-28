@@ -1,0 +1,22 @@
+{
+  "algorithm": "SLH-DSA-SHA2-256f",
+  "security_level": 256,
+  "algorithm_id": 104,
+  "generated_at": "2025-11-24T02:00:06.067Z",
+  "user_info": {
+    "name": "Paul Applegate",
+    "email": "me@paulapplegate.com"
+  },
+  "fingerprint": "7CE9 A521 D516 C7E4 B2DB 644D 126C CA43 7D3A 6705",
+  "valid_from": "11/23/25 9:00 PM",
+  "public_key": {
+    "hex": "83556d3ba6b4bfb11f9f75bd6d0cde171efd7296ca21d98a2150834a13b4062fbf85e6feef31dbe1be82ea49f9981ae27cfe2c98e325a927cca1fdd0de017509",
+    "base64": "g1VtO6a0v7Efn3W9bQzeFx79cpbKIdmKIVCDShO0Bi+/heb+7zHb4b6C6kn5mBrifP4smOMlqSfMof3Q3gF1CQ==",
+    "size": 64
+  },
+  "secret_key": {
+    "hex": "ee6f287c659aed088fde92062633bab465dfa36864877f82e663d7d6a3a089521169af0ea13fb9ac259175b6e0b9de475550ca8034616d2712a9d4d5ed20c85583556d3ba6b4bfb11f9f75bd6d0cde171efd7296ca21d98a2150834a13b4062fbf85e6feef31dbe1be82ea49f9981ae27cfe2c98e325a927cca1fdd0de017509",
+    "base64": "7m8ofGWa7QiP3pIGJjO6tGXfo2hkh3+C5mPX1qOgiVIRaa8OoT+5rCWRdbbgud5HVVDKgDRhbScSqdTV7SDIVYNVbTumtL+xH591vW0M3hce/XKWyiHZiiFQg0oTtAYvv4Xm/u8x2+G+gupJ+Zga4nz+LJjjJaknzKH90N4BdQk=",
+    "size": 128
+  }
+}

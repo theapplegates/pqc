@@ -1,0 +1,10 @@
+use sequoia_openpgp::types::PublicKeyAlgorithm;
+use sequoia_openpgp::crypto::backend::interface::Asymmetric;
+
+fn main() {
+    let slhdsa_ok = PublicKeyAlgorithm::SLHDSA256s.is_supported();
+    let mlkem_ok = PublicKeyAlgorithm::MLKEM1024_X448.is_supported();
+
+    println!("SLHDSA256s supported: {}", slhdsa_ok);
+    println!("MLKEM1024_X448 supported: {}", mlkem_ok);
+}

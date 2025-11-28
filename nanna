@@ -1,0 +1,8 @@
+To run the slhdsa256s_mlkem1024_x448_demo.rs file, you must have the Rust compiler installed, then use the command rustc slhdsa256s_mlkem1024_x448_demo.rs to compile it, followed by executing the resulting file by typing ./slhdsa256s_mlkem1024_x448_demo. 
+Install the Rust compiler: If you don't have Rust installed, download and install it from the official Rust website, as this is necessary to compile .rs files. You can find the download link on the official Rust website.
+Open your terminal or command prompt: Navigate to the directory where you saved the file.
+Compile the file: Use the Rust compiler to create an executable file. Type the following command and press Enter:
+rustc slhdsa256s_mlkem1024_x448_demo.rs.
+Run the executable: After compilation, you will have a new file named slhdsa256s_mlkem1024_x448_demo. Run it by typing:
+./slhdsa256s_mlkem1024_x448_demo
+
