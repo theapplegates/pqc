@@ -5,7 +5,7 @@ members = [
     "buffered-reader",
     "ipc",
     "net",
-    "openpgp",
+    "openpgp", "pqc_demo",
 ]
 
 [profile.release]
