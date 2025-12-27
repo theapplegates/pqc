@@ -63,8 +63,8 @@ STEP 3: Verifying signature...
 ║                    SUCCESS!                            ║
 ╠════════════════════════════════════════════════════════╣
 ║  Generated Files:                                      ║
-║    • alice_public.asc  - Public key                    ║
-║    • alice_secret.asc  - Secret key                    ║
+║    • paul_public.asc  - Public key                    ║
+║    • paul_secret.asc  - Secret key                    ║
 ║    • message_signed.asc - Signed message               ║
 ║                                                        ║
 ║  What Happened:                                        ║

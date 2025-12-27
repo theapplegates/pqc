@@ -1,0 +1,9 @@
+[package]
+name = "pqc_demo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sequoia-openpgp = "1.22"   # or latest available
+anyhow = "1.0"
+

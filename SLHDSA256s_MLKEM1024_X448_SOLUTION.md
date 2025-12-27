@@ -39,7 +39,7 @@ Successfully creates a V6 certificate with:
 
 ### Generate keys:
 ```bash
-./automation_scripts.sh generate "alice@example.com" "alice"
+./automation_scripts.sh generate "me@paulapplegate.com" "paul"
 ```
 
 ### Output:
@@ -92,3 +92,4 @@ Keys generated successfully:
 - ✓ OpenPGP V6 signatures can use SHA3-512 hash algorithm
 
 When signing with SLHDSA256s on V6 keys, SHA3-512 is the appropriate hash algorithm choice for OpenPGP signatures, complementing SLHDSA's internal SHAKE-256 usage.
+
